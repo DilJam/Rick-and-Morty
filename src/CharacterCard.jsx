@@ -34,3 +34,5 @@ objectFit: 'cover',
 borderRadius: '4px',
 marginBottom: '10px',
 };
+
+export default CharacterCard;
