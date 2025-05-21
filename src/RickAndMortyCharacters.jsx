@@ -1,8 +1,9 @@
 import React , {useState, useEffect, useCallback} from 'react';
 import CharacterCard from './CharacterCard';
 import PaginationControls from './PaginationControls';
+import SearchBar from './SearchBar';
 
-const API_URL = 'https://rickandmortyapi.com/api/character'
+const API_URL = 'https://rickandmortyapi.com/api/character/'
 
 function RickAndMortyCharacters() {
     //Estado para guardar la lista de personajes
@@ -15,12 +16,17 @@ function RickAndMortyCharacters() {
     const [currentPage, setCurrentPage] = useState(1);
     //Estado con la información de la paginación
     const [paginationInfo, setPaginationInfo] = useState(null);
+    //Estado para la busqueda
+    const [searchTerm, setSearchTerm] = useState('');
 
     const fecthCharacters = useCallback(async ()=>{
         setLoading(true);
         setError(null);
         //Construimos la URL de la API, incluyendo la página actual
         let url =`${API_URL}?page=${currentPage}`
+        if(searchTerm){
+            url = `${API_URL}?name=${searchTerm}`
+        }
 
         try {
             const response = await fetch(url)
@@ -32,11 +38,18 @@ function RickAndMortyCharacters() {
                        setLoading(false);
                        return;
                 }
+                if(response.status === 404 && searchTerm){
+                    setCharacters([]);
+                    setLoading(false);
+                    return;
+                }
                 throw new Error('Error HTTP: ' + response.status)
             }
             const data = await response.json();
             setCharacters(data.results || []);
-            setPaginationInfo(data.info);                  
+            if (!searchTerm){
+                setPaginationInfo(data.info); 
+            }    
         } 
         catch(error){
             console.error("Error al obtener personajes ", error);
@@ -46,7 +59,7 @@ function RickAndMortyCharacters() {
         }finally{
             setLoading(false);
         }
-    },[currentPage])
+    },[currentPage, searchTerm])
 
     //useEffect para realizar el fetch cuando el componente se monta
     useEffect(()=>{
@@ -75,10 +88,20 @@ function RickAndMortyCharacters() {
         }
     }
 
+    //Algoritmo de busqueda
+    const handlerSearch = (newSearchTerm) =>{
+        if(newSearchTerm !== searchTerm){
+            setCharacters([]);
+            setSearchTerm(newSearchTerm);
+        }
+    }
+
+
     return(
         <>
             <div style={appContainerStyle}>
                 <h1>Personajes de Rick and Morty</h1>
+                <SearchBar onSearch={handlerSearch} />
                 <div style={characterGridStyle}>
                     {characters.map(character => (
                         <CharacterCard key={character.id} character={character}/>
@@ -87,7 +110,7 @@ function RickAndMortyCharacters() {
                 </div>
                 {!error && (
                     <PaginationControls
-                        onPrevPage={handlerPrevPage}
+                        onPrevPage={handlerPrevPage}//handlerPrevPage
                         onNextPage={handlerNextPage}
                         currentPage={currentPage}
                         isLoading={loading}
